@@ -39,6 +39,18 @@ class FeedbackOut(BaseModel):
     savedAt: datetime
 
 
+class DeviceActionResult(BaseModel):
+    device: str
+    action: str
+    success: bool
+    detail: str | None = None
+
+
+class ApplyOut(BaseModel):
+    scenarioId: int
+    actions: list[DeviceActionResult]
+
+
 class ModelMetricsOut(BaseModel):
     trainRmse: float
     testRmse: float

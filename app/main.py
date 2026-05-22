@@ -7,6 +7,8 @@ from app.database.db import create_tables, get_db
 from app.ml.model_service import comfort_model_service
 from app.ml.recommender import scenario_recommender
 from app.schemas.scenario_schema import (
+    ApplyOut,
+    DeviceActionResult,
     FeedbackIn,
     FeedbackOut,
     ModelMetricsOut,
@@ -20,6 +22,7 @@ from app.services.scenario_service import (
     create_scenario,
     get_all_scenarios,
     get_latest_scenario,
+    get_scenario_or_none,
     to_scenario_out,
 )
 
@@ -121,6 +124,70 @@ async def get_scenarios(
     return ScenarioListOut(
         scenarios=[to_scenario_out(scenario) for scenario in scenarios]
     )
+
+
+def _actions_for_scenario(scenario) -> list[tuple[str, str]]:
+    """Derive device actions from the scenario's own preferred vs current values."""
+    actions: list[tuple[str, str]] = []
+
+    current_temp = scenario.current_temperature
+    current_hum = scenario.current_humidity
+
+    # --- Heater ---
+    # If we know current temperature: heat up when room is colder than preferred.
+    # Fallback: use preferred temperature against the model's comfort optimum (21°C).
+    if current_temp is not None:
+        heater_action = "turn on" if current_temp < scenario.pref_temperature else "turn off"
+    else:
+        heater_action = "turn on" if scenario.pref_temperature < 21.0 else "turn off"
+    actions.append(("Heater", heater_action))
+
+    # --- Windows ---
+    # Open windows when current humidity exceeds preferred (ventilate to reduce moisture).
+    # Fallback: open if preferred humidity is above the comfort optimum (50%).
+    if current_hum is not None:
+        window_action = "open" if current_hum > scenario.pref_humidity else "close"
+    else:
+        window_action = "open" if scenario.pref_humidity > 50.0 else "close"
+    actions.append(("Windows", window_action))
+
+    # --- Curtain ---
+    # Open during daytime hours (stored in the scenario from sensor timestamp).
+    if scenario.hour is not None:
+        curtain_action = "open" if 8 <= scenario.hour < 20 else "close"
+    else:
+        curtain_action = "open"
+    actions.append(("Curtain", curtain_action))
+
+    return actions
+
+
+@app.post("/scenario/{scenario_id}/apply", response_model=ApplyOut)
+async def apply_scenario(scenario_id: int, db: Session = Depends(get_db)):
+    """Apply a scenario by sending device actions to the backend."""
+    scenario = get_scenario_or_none(db, scenario_id)
+
+    if scenario is None:
+        raise HTTPException(status_code=404, detail=f"Scenario {scenario_id} not found")
+
+    planned = _actions_for_scenario(scenario)
+    results: list[DeviceActionResult] = []
+
+    for device, action in planned:
+        try:
+            await backend_client.send_device_action(device, action)
+            results.append(DeviceActionResult(device=device, action=action, success=True))
+        except Exception as exc:
+            results.append(
+                DeviceActionResult(device=device, action=action, success=False, detail=str(exc))
+            )
+
+    # Mark scenario as applied only if all actions succeeded
+    if all(r.success for r in results):
+        scenario.applied = True
+        db.commit()
+
+    return ApplyOut(scenarioId=scenario_id, actions=results)
 
 
 @app.post("/feedback", response_model=FeedbackOut, status_code=201)
