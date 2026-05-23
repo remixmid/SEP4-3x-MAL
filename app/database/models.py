@@ -1,6 +1,14 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.db import Base
@@ -34,25 +42,33 @@ class Scenario(Base):
     quarter: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_weekend: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    feedback: Mapped["Feedback | None"] = relationship(
+    feedback_items: Mapped[list["Feedback"]] = relationship(
         "Feedback",
         back_populates="scenario",
         cascade="all, delete-orphan",
-        uselist=False,
     )
 
 
 class Feedback(Base):
     __tablename__ = "feedback"
 
+    __table_args__ = (
+        UniqueConstraint(
+            "scenario_id",
+            "indicator",
+            name="uq_feedback_scenario_indicator",
+        ),
+    )
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
     scenario_id: Mapped[int] = mapped_column(
         ForeignKey("scenarios.id"),
         nullable=False,
-        unique=True,
         index=True,
     )
+
+    indicator: Mapped[str] = mapped_column(String(50), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -64,5 +80,5 @@ class Feedback(Base):
 
     scenario: Mapped[Scenario] = relationship(
         "Scenario",
-        back_populates="feedback",
+        back_populates="feedback_items",
     )
