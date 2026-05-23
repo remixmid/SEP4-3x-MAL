@@ -1,0 +1,16 @@
+.venv/
+venv/
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.idea/
+.pytest_cache/
+
+.env
+scenario.db
+
+models/*.joblib
+models/*.json
