@@ -1,0 +1,25 @@
+* [33m5509ab7[m[33m ([m[1;32mmain[m[33m)[m preprocesing
+[31m|[m  one_room_apartement.csv | 12447 [32m++++++++++++++++++++++++++++++++++++[m
+[31m|[m  preprocesing.py         |    76 [32m+[m
+[31m|[m  preprocessed.csv        | 11732 [32m+++++++++++++++++++++++++++++++++[m
+[31m|[m  3 files changed, 24255 insertions(+)
+* [33m2bf2e18[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Create CODEOWNERS
+[31m|[m  CODEOWNERS | 1 [32m+[m
+[31m|[m  1 file changed, 1 insertion(+)
+* [33mec78841[m integrate ML model into MAL service API
+[31m|[m  Main.py | 32 [32m+++++++++++[m[31m---------------------[m
+[31m|[m  1 file changed, 11 insertions(+), 21 deletions(-)
+* [33m6a319a2[m Add room satisfaction model integration
+[31m|[m  room_satisfaction_model.py | 376 [32m+++++++++++++++++++++++++++++++++++[m
+[31m|[m  1 file changed, 376 insertions(+)
+*   [33m9e110c7[m Merge pull request #3 from A-Emilia/API
+[32m|[m[33m\[m  
+[32m|[m * [33me5d604b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mAPI[m[33m, [m[1;31morigin/API[m[33m)[m MAL service API  and IM endpoints
+[32m|[m[32m/[m  
+[32m|[m    Main.py                          |  89 [32m+++++++++++++++++++++++++++[m
+[32m|[m    README.md                        |   9 [32m++[m[31m-[m
+[32m|[m    __pycache__/Main.cpython-313.pyc | Bin [31m0[m -> [32m4616[m bytes
+[32m|[m    3 files changed, 97 insertions(+), 1 deletion(-)
+* [33m5d51a99[m first commit, added readme
+   README.md | 5 [32m+++++[m
+   1 file changed, 5 insertions(+)
