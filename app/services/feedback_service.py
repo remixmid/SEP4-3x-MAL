@@ -22,7 +22,7 @@ def save_feedback(db: Session, payload: FeedbackIn) -> FeedbackOut:
             db.query(Feedback)
             .filter(
                 Feedback.scenario_id == payload.scenarioId,
-                Feedback.indicator == item.indicator,
+                Feedback.indicator == item.type,
             )
             .first()
         )
@@ -35,7 +35,7 @@ def save_feedback(db: Session, payload: FeedbackIn) -> FeedbackOut:
             saved_items.append(
                 IndicatorFeedbackOut(
                     id=existing_feedback.id,
-                    indicator=existing_feedback.indicator,
+                    type=existing_feedback.indicator,
                     liked=existing_feedback.liked,
                     savedAt=existing_feedback.created_at,
                 )
@@ -45,7 +45,7 @@ def save_feedback(db: Session, payload: FeedbackIn) -> FeedbackOut:
 
         feedback = Feedback(
             scenario_id=payload.scenarioId,
-            indicator=item.indicator,
+            indicator=item.type,
             liked=item.liked,
         )
 
@@ -56,7 +56,7 @@ def save_feedback(db: Session, payload: FeedbackIn) -> FeedbackOut:
         saved_items.append(
             IndicatorFeedbackOut(
                 id=feedback.id,
-                indicator=feedback.indicator,
+                type=feedback.indicator,
                 liked=feedback.liked,
                 savedAt=feedback.created_at,
             )

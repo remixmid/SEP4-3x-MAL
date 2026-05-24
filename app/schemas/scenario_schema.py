@@ -29,7 +29,7 @@ class ScenarioListOut(BaseModel):
 
 
 class IndicatorFeedbackIn(BaseModel):
-    indicator: Literal["temperature", "humidity"]
+    type: Literal["temperature", "humidity", "light"]
     liked: bool
 
 
@@ -39,17 +39,17 @@ class FeedbackIn(BaseModel):
 
     @model_validator(mode="after")
     def validate_unique_indicators(self):
-        indicators = [item.indicator for item in self.feedback]
+        feedback_types = [item.type for item in self.feedback]
 
-        if len(indicators) != len(set(indicators)):
-            raise ValueError("Each indicator can appear only once in feedback")
+        if len(feedback_types) != len(set(feedback_types)):
+            raise ValueError("Each scenario value type can appear only once in feedback")
 
         return self
 
 
 class IndicatorFeedbackOut(BaseModel):
     id: int
-    indicator: str
+    type: str
     liked: bool
     savedAt: datetime
 
