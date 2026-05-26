@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotFnv import load_dotenv
 
 load_dotenv()
 
@@ -20,11 +20,12 @@ def get_required_env(name: str) -> str:
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
 if ENVIRONMENT == "local":
-    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./scenario.db")
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
 else:
     DATABASE_URL = get_required_env("DATABASE_URL")
 
 BACKEND_BASE_URL = get_required_env("BACKEND_BASE_URL")
+IOT_JWT_TOKEN = get_required_env("IOT_JWT_TOKEN")
 
 MODEL_DATASET_PATH = os.getenv(
     "MODEL_DATASET_PATH",
