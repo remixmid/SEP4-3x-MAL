@@ -2,10 +2,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, Depends, FastAPI, Body, HTTPException, Query
 from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 
 from app.auth.auth_bearer import JWTBearer
-from app.auth.auth_handler import check_user, signJWT
+from app.auth.auth_handler import check_user, get_current_user, hash_password, signJWT, verify_password
 from app.database.db import create_tables, get_db
+from app.database.models import User
 from app.ml.model_service import comfort_model_service
 from app.ml.recommender import scenario_recommender
 from app.schemas.scenario_schema import (
@@ -17,6 +19,7 @@ from app.schemas.scenario_schema import (
     ScenarioListOut,
     ScenarioOut,
     SensorMeasurement,
+    UserCreateSchema,
     UserLoginSchema,
     UserSchema,
 )
@@ -49,6 +52,7 @@ private_router = APIRouter(
 
 # Public routes
 public_router = APIRouter(prefix="/auth")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 app = FastAPI(
     title="SEP4 MAL / ML Service API",
@@ -64,10 +68,50 @@ app = FastAPI(
 async def read_root() -> dict:
     return {"message": "Welcome to your example blog app!"}
 
+@public_router.post("/user/register", tags=["user"])
+async def create_user(user: UserCreateSchema = Body(...), db: Session = Depends(get_db)):
+
+    existing_user = db.query(User).filter(
+        User.email == user.email
+    ).first()
+
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already exists"
+        )
+    
+    new_user = User(
+        email=user.email,
+        hashed_password=hash_password(user.password)
+    )
+    db.add(new_user)
+    db.commit()
+    signJWT(user.email)
+
+    return {"message": "User created"}
+
+@public_router.post("/user/login")
+async def user_login(user: UserLoginSchema = Body(...), db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.email == user.email).first()
+
+    if not db_user or not verify_password(user.password, db_user.hashed_password):
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid credentials"
+            )
+    
+    token = signJWT({"sub": str(user.email)})
+    return {"access_token": token, "token_type": "bearer"}
+
+@private_router.get("/profile")
+def profile(user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    return user
+
 @private_router.get("/health")
 async def health():
     return {"status": "ok"}
-
 
 @private_router.get("/model/metrics", response_model=ModelMetricsOut)
 async def get_model_metrics():
@@ -225,18 +269,6 @@ async def post_tba_feedback(
 ):
     return await post_feedback(payload, db)
 
-@public_router.post("/user/signup", tags=["user"])
-async def create_user(user: UserSchema = Body(...)):
-    users.append(user) # replace with db call
-    return signJWT(user.email)
-
-@public_router.post("/user/login", tags=["user"])
-async def user_login(user: UserLoginSchema = Body(...)):
-    if check_user(user):
-        return signJWT(user.email)
-    return {
-        "error": "Wrong login details!"
-    }
 
 app.include_router(private_router)
 app.include_router(public_router)

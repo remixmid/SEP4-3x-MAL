@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator, EmailStr
+from sqlalchemy import Column, Integer, String
 
 
 class SensorMeasurement(BaseModel):
@@ -79,17 +80,20 @@ class ModelMetricsOut(BaseModel):
     rows: int
     features: list[str]
  
-class UserSchema(BaseModel):
-    name: str = Field(...)
-    email: EmailStr = Field(...)
-    password: str = Field(...)
+class UserCreateSchema(BaseModel):
+    __tablename__ = "users"
+
+    id = Integer
+    name: str
+    email: EmailStr
+    hashed_password: str
 
     class Config:
         schema_extra = {
             "example": {
                 "name": "Theo Vale",
                 "email": "theovale@x.com",
-                "password": "weakpassword"
+                "password": "hashedpassword"
             }
         }
 

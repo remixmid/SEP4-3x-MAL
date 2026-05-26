@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from pydantic import EmailStr
 from sqlalchemy import (
     Boolean,
     DateTime,
@@ -8,11 +9,19 @@ from sqlalchemy import (
     Integer,
     String,
     UniqueConstraint,
+    Column
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.db import Base
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    fullname = Column(String, unique=True, index=True)
+    email = Column(EmailStr, unique=True, unique=True, index=True)
+    hashed_password = Column(String)
 
 class Scenario(Base):
     __tablename__ = "scenarios"
@@ -82,3 +91,4 @@ class Feedback(Base):
         "Scenario",
         back_populates="feedback_items",
     )
+

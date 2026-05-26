@@ -11,8 +11,6 @@ def _connect_args() -> dict:
         return {"check_same_thread": False}
 
     return {}
-
-
 engine = create_engine(
     DATABASE_URL,
     connect_args=_connect_args(),
