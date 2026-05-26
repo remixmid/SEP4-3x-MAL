@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
 from app.auth.auth_bearer import JWTBearer
-from app.auth.auth_handler import check_user, get_current_user, hash_password, signJWT, verify_password
+from app.auth.auth_handler import get_current_user, hash_password, signJWT, verify_password
 from app.database.db import create_tables, get_db
 from app.database.models import User
 from app.ml.model_service import comfort_model_service
@@ -20,8 +20,7 @@ from app.schemas.scenario_schema import (
     ScenarioOut,
     SensorMeasurement,
     UserCreateSchema,
-    UserLoginSchema,
-    UserSchema,
+    UserLoginSchema
 )
 from app.services.backend_client import backend_client
 from app.services.feedback_service import save_feedback
@@ -46,7 +45,7 @@ async def lifespan(app: FastAPI):
 
 #protected routes
 private_router = APIRouter(
-    prefix="/api",
+    prefix="/auth",
     dependencies=[Depends(JWTBearer())]
 )
 
@@ -82,6 +81,7 @@ async def create_user(user: UserCreateSchema = Body(...), db: Session = Depends(
         )
     
     new_user = User(
+        fullname=user.name,
         email=user.email,
         hashed_password=hash_password(user.password)
     )
@@ -89,7 +89,7 @@ async def create_user(user: UserCreateSchema = Body(...), db: Session = Depends(
     db.commit()
     signJWT(user.email)
 
-    return {"message": "User created"}
+    return {"message": "User created", "user": new_user}
 
 @public_router.post("/user/login")
 async def user_login(user: UserLoginSchema = Body(...), db: Session = Depends(get_db)):
@@ -101,12 +101,15 @@ async def user_login(user: UserLoginSchema = Body(...), db: Session = Depends(ge
             detail="Invalid credentials"
             )
     
-    token = signJWT({"sub": str(user.email)})
+    token = signJWT(user.email)
     return {"access_token": token, "token_type": "bearer"}
 
 @private_router.get("/profile")
-def profile(user_id: str = Depends(get_current_user), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+def profile(user_email: str = Depends(get_current_user), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == user_email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
     return user
 
 @private_router.get("/health")

@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict
 from decouple import config
 from fastapi import Depends, HTTPException
@@ -13,16 +13,16 @@ JWT_SECRET = config("secret")
 JWT_ALGORITHM = config("algorithm")
 
 pwd_context = CryptContext(
-    schemes=["bcrypt"],
+    schemes=["argon2"],
     deprecated="auto"
 )
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def hash_password(password: str):
     return pwd_context.hash(password)
 
-def verify_password(plain, hashed):
-    return pwd_context.verify(plain, hashed)
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
 
 def token_response(token: str):
     return {
@@ -31,9 +31,11 @@ def token_response(token: str):
 
 #Signing the JWT string:
 def signJWT(user_email: str) -> Dict[str, str]:
+    expire = datetime.now(timezone.utc) + timedelta(hours=1)
+
     payload = {
-        "user_id": user_email,
-        "expires": datetime.utcnow() + timedelta(minutes=30)
+        "sub": user_email,
+        "expires": int(expire.timestamp())
     }
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
     return token_response(token)
@@ -48,14 +50,11 @@ def decodeJWT(token: str) -> dict:
     
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user_id = payload.get("sub")
+    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
 
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
+    user = payload.get("sub")
 
-        return user_id
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Token expired or invalid")
+    return user

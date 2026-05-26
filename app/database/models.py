@@ -18,10 +18,10 @@ from app.database.db import Base
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    fullname = Column(String, unique=True, index=True)
-    email = Column(EmailStr, unique=True, unique=True, index=True)
-    hashed_password = Column(String)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    fullname: Mapped[str] = mapped_column(String, unique=True, index=True)
+    email: Mapped[str] = mapped_column(String, unique=True, index=True)
+    hashed_password: Mapped[str] = mapped_column(String)
 
 class Scenario(Base):
     __tablename__ = "scenarios"

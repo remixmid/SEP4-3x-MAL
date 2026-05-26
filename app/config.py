@@ -3,7 +3,12 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+env_path = Path(r"C:\Users\kelsng\SoftwareEngineering\4thSemester\SEP4\SEP4-3x-MAL\.env.example")
+
+print("FORCED ENV PATH:", env_path)
+print("EXISTS:", env_path.exists())
+
+load_dotenv(dotenv_path=env_path)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,7 +25,7 @@ def get_required_env(name: str) -> str:
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
 if ENVIRONMENT == "local":
-    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./scenario.db")
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
 else:
     DATABASE_URL = get_required_env("DATABASE_URL")
 

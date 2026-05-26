@@ -83,10 +83,10 @@ class ModelMetricsOut(BaseModel):
 class UserCreateSchema(BaseModel):
     __tablename__ = "users"
 
-    id = Integer
+    id: int
     name: str
     email: EmailStr
-    hashed_password: str
+    password: str
 
     class Config:
         schema_extra = {
