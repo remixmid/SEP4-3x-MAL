@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, Body, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.auth.auth_bearer import JWTBearer
+from app.auth.auth_handler import check_user, signJWT
 from app.database.db import create_tables, get_db
 from app.ml.model_service import comfort_model_service
 from app.ml.recommender import scenario_recommender
@@ -15,6 +17,8 @@ from app.schemas.scenario_schema import (
     ScenarioListOut,
     ScenarioOut,
     SensorMeasurement,
+    UserLoginSchema,
+    UserSchema,
 )
 from app.services.backend_client import backend_client
 from app.services.feedback_service import save_feedback
@@ -25,7 +29,10 @@ from app.services.scenario_service import (
     get_scenario_or_none,
     to_scenario_out,
 )
+import uvicorn
 
+if __name__ == "__main__":
+    uvicorn.run("app.api:app", host="192.168.123.52", port=8081, reload=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,6 +40,15 @@ async def lifespan(app: FastAPI):
     comfort_model_service.load_or_train()
     yield
 
+
+#protected routes
+private_router = APIRouter(
+    prefix="/api",
+    dependencies=[Depends(JWTBearer())]
+)
+
+# Public routes
+public_router = APIRouter(prefix="/auth")
 
 app = FastAPI(
     title="SEP4 MAL / ML Service API",
@@ -44,13 +60,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+@app.get("/", tags=["root"])
+async def read_root() -> dict:
+    return {"message": "Welcome to your example blog app!"}
 
-@app.get("/health")
+@private_router.get("/health")
 async def health():
     return {"status": "ok"}
 
 
-@app.get("/model/metrics", response_model=ModelMetricsOut)
+@private_router.get("/model/metrics", response_model=ModelMetricsOut)
 async def get_model_metrics():
     metrics = comfort_model_service.get_metrics()
 
@@ -64,7 +83,7 @@ async def get_model_metrics():
     )
 
 
-@app.post("/model/retrain", response_model=ModelMetricsOut)
+@private_router.post("/model/retrain", response_model=ModelMetricsOut)
 async def retrain_model():
     metrics = comfort_model_service.retrain()
 
@@ -78,7 +97,7 @@ async def retrain_model():
     )
 
 
-@app.get("/scenario/current", response_model=ScenarioOut)
+@private_router.get("/scenario/current", response_model=ScenarioOut)
 async def get_current_scenario(db: Session = Depends(get_db)):
     try:
         measurement = await backend_client.get_current_sensor_data()
@@ -103,7 +122,7 @@ async def get_current_scenario(db: Session = Depends(get_db)):
     return to_scenario_out(scenario)
 
 
-@app.post("/scenario/predict", response_model=ScenarioOut)
+@private_router.post("/scenario/predict", response_model=ScenarioOut)
 async def predict_scenario_from_payload(
     payload: SensorMeasurement,
     db: Session = Depends(get_db),
@@ -114,7 +133,7 @@ async def predict_scenario_from_payload(
     return to_scenario_out(scenario)
 
 
-@app.get("/scenario/all", response_model=ScenarioListOut)
+@private_router.get("/scenario/all", response_model=ScenarioListOut)
 async def get_scenarios(
     db: Session = Depends(get_db),
     limit: int = Query(default=50, ge=1, le=500),
@@ -162,7 +181,7 @@ def _actions_for_scenario(scenario) -> list[tuple[str, str]]:
     return actions
 
 
-@app.post("/scenario/{scenario_id}/apply", response_model=ApplyOut)
+@private_router.post("/scenario/{scenario_id}/apply", response_model=ApplyOut)
 async def apply_scenario(scenario_id: int, db: Session = Depends(get_db)):
     """Apply a scenario by sending device actions to the backend."""
     scenario = get_scenario_or_none(db, scenario_id)
@@ -190,7 +209,7 @@ async def apply_scenario(scenario_id: int, db: Session = Depends(get_db)):
     return ApplyOut(scenarioId=scenario_id, actions=results)
 
 
-@app.post("/feedback", response_model=FeedbackOut, status_code=201)
+@private_router.post("/feedback", response_model=FeedbackOut, status_code=201)
 async def post_feedback(payload: FeedbackIn, db: Session = Depends(get_db)):
     try:
         return save_feedback(db, payload)
@@ -199,9 +218,25 @@ async def post_feedback(payload: FeedbackIn, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail=str(error)) from error
 
 
-@app.post("/TBA_FEEDBACK", response_model=FeedbackOut, status_code=201)
+@private_router.post("/TBA_FEEDBACK", response_model=FeedbackOut, status_code=201)
 async def post_tba_feedback(
     payload: FeedbackIn,
     db: Session = Depends(get_db),
 ):
     return await post_feedback(payload, db)
+
+@public_router.post("/user/signup", tags=["user"])
+async def create_user(user: UserSchema = Body(...)):
+    users.append(user) # replace with db call
+    return signJWT(user.email)
+
+@public_router.post("/user/login", tags=["user"])
+async def user_login(user: UserLoginSchema = Body(...)):
+    if check_user(user):
+        return signJWT(user.email)
+    return {
+        "error": "Wrong login details!"
+    }
+
+app.include_router(private_router)
+app.include_router(public_router)

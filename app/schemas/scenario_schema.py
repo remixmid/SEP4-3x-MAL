@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator, EmailStr
 
 
 class SensorMeasurement(BaseModel):
@@ -78,3 +78,29 @@ class ModelMetricsOut(BaseModel):
     testR2: float
     rows: int
     features: list[str]
+ 
+class UserSchema(BaseModel):
+    name: str = Field(...)
+    email: EmailStr = Field(...)
+    password: str = Field(...)
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Theo Vale",
+                "email": "theovale@x.com",
+                "password": "weakpassword"
+            }
+        }
+
+class UserLoginSchema(BaseModel):
+    email: EmailStr = Field(...)
+    password: str = Field(...)
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "email": "theovale@x.com",
+                "password": "weakpassword"
+            }
+        }
