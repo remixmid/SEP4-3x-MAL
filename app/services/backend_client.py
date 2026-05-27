@@ -1,6 +1,3 @@
-from datetime import datetime
-from typing import Any
-
 import httpx
 
 from app.config import BACKEND_BASE_URL, IOT_JWT_TOKEN
@@ -80,42 +77,3 @@ class BackendClient:
             payload,
             ["humidity", "Humidity", "currentHumidity"],
         )
-
-        timestamp_raw = self._get_first_existing(
-            payload,
-            ["timestamp", "time", "createdAt", "created_at"],
-            required=False,
-        )
-
-        timestamp = None
-
-        if timestamp_raw:
-            timestamp = datetime.fromisoformat(
-                str(timestamp_raw).replace("Z", "+00:00")
-            )
-
-        return SensorMeasurement(
-            temperature=float(temperature),
-            humidity=float(humidity),
-            timestamp=timestamp,
-        )
-
-    def _get_first_existing(
-        self,
-        payload: dict,
-        keys: list[str],
-        required: bool = True,
-    ):
-        for key in keys:
-            if key in payload and payload[key] is not None:
-                return payload[key]
-
-        if required:
-            raise ValueError(
-                f"Backend response has no required field. Tried keys: {keys}"
-            )
-
-        return None
-
-
-backend_client = BackendClient()
