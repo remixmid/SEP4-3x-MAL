@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from dotFnv import load_dotenv
+from dotenv import load_dotenv
 
 load_dotenv()
 
